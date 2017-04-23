@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <menuitem name="VCS Integration"
+            id="vcs_config"
+            groups="project.group_project_manager,project.group_project_user"
+            web_icon="project,static/description/icon.png"
+            parent="project.menu_main_pm"
+        />
+
+        <menuitem name="Repository Config"
+            id="repo_config"
+            groups="project.group_project_manager,project.group_project_user"
+            web_icon="project,static/description/icon.png"
+            parent="vcs_config"
+        />
+
+        <record id="action_view_repositories" model="ir.actions.act_window">
+            <field name="res_model">repository.github</field>
+            <field name="name">GitHub</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem name="Repositories"
+                  action="action_view_repositories"
+                  id="menu_action_view_repositories"
+                  parent="repo_config"
+                  sequence="5"/>
+
+        <record id="repository_form_view" model="ir.ui.view">
+            <field name="name">Repository Form</field>
+            <field name="model">repository.github</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                        </group>
+                        <group>
+                            <field name="user_id"/>
+                            <field name="main_branch"/>
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_view_branches" model="ir.actions.act_window">
+            <field name="res_model">branch.github</field>
+            <field name="name">GitHub Branches</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem name="Branches"
+          action="action_view_branches"
+          id="menu_action_view_branches"
+          parent="repo_config"
+          sequence="7"/>
+
+    </data>
+</odoo>
