@@ -1,3 +1,2 @@
 from . import project
-from . import bitbucket
-from . import github_integration
+from . import vcs_integration

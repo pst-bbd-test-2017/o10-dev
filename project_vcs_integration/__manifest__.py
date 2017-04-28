@@ -20,6 +20,5 @@
     'data': [
         'views/repository_views.xml',
         'views/project_views.xml',
-        # 'data/sequence.xml',
     ],
 }

@@ -2,6 +2,24 @@
 <odoo>
     <data>
 
+        <record id="vcs_user_form_view" model="ir.ui.view">
+            <field name="name">VCS User Form</field>
+            <field name="model">vcs.user</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group>
+                        <group>
+                            <field name="username"/>
+                            <field name="type"/>
+                        </group>
+                        <group>
+                            <field name="password" password="True"/>
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
         <menuitem name="VCS Integration"
             id="vcs_config"
             groups="project.group_project_manager,project.group_project_user"
@@ -17,8 +35,8 @@
         />
 
         <record id="action_view_repositories" model="ir.actions.act_window">
-            <field name="res_model">repository.github</field>
-            <field name="name">GitHub</field>
+            <field name="res_model">vcs.repository</field>
+            <field name="name">VCS Repositories</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
         </record>
@@ -31,12 +49,13 @@
 
         <record id="repository_form_view" model="ir.ui.view">
             <field name="name">Repository Form</field>
-            <field name="model">repository.github</field>
+            <field name="model">vcs.repository</field>
             <field name="arch" type="xml">
                 <form>
                     <group>
                         <group>
                             <field name="name"/>
+                            <field name="related_type"/>
                         </group>
                         <group>
                             <field name="user_id"/>
@@ -48,10 +67,49 @@
         </record>
 
         <record id="action_view_branches" model="ir.actions.act_window">
-            <field name="res_model">branch.github</field>
-            <field name="name">GitHub Branches</field>
+            <field name="res_model">vcs.branch</field>
+            <field name="name">VCS Branches</field>
             <field name="view_type">form</field>
             <field name="view_mode">tree,form</field>
+        </record>
+
+        <record id="branch_form_view" model="ir.ui.view">
+            <field name="name">Branch Form</field>
+            <field name="model">vcs.branch</field>
+            <field name="arch" type="xml">
+                <form>
+                    <button
+                            type="object"
+                            class="oe_stat_button"
+                            string="Update"
+                            name="action_update"
+                    />
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="related_type"/>
+                        </group>
+                        <group>
+                            <field name="repository_id"/>
+                            <field name="pull_request"/>
+                            <field name="pull_request_link" widget="url"/>
+                        </group>
+                    </group>
+                    <group string="Latest Commit">
+                        <field name="commit_id"/>
+                        <field name="related_commit_sha_string"/>
+                        <field name="related_commit_author"/>
+                    </group>
+                    <notebook attrs="{'invisible': [('pr_commit_ids', '=', [])]}">
+                        <page
+                                string="Pull Request Commits"
+                                attrs="{'invisible': [('pr_commit_ids', '=', [])]}"
+                        >
+                            <field name="pr_commit_ids"/>
+                        </page>
+                    </notebook>
+                </form>
+            </field>
         </record>
 
         <menuitem name="Branches"
@@ -59,6 +117,31 @@
           id="menu_action_view_branches"
           parent="repo_config"
           sequence="7"/>
+
+        <record id="commit_tree_view" model="ir.ui.view">
+            <field name="name">Commit Tree View</field>
+            <field name="model">vcs.commit</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="name"/>
+                    <field name="author"/>
+                    <field name="sha_string"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="action_view_commits" model="ir.actions.act_window">
+            <field name="res_model">vcs.commit</field>
+            <field name="name">VCS Commits</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem name="Commits"
+          action="action_view_commits"
+          id="menu_action_view_commits"
+          parent="repo_config"
+          sequence="9"/>
 
     </data>
 </odoo>
