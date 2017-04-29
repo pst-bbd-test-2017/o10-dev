@@ -126,6 +126,7 @@
                     <field name="name"/>
                     <field name="author"/>
                     <field name="sha_string"/>
+                    <field name="date"/>
                 </tree>
             </field>
         </record>

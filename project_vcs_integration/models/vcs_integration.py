@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import github
-from pybitbucket import bitbucket, auth, snippet, commit, comment, pullrequest as pr
+from pybitbucket import bitbucket, auth as bb_auth
+from pybitbucket.repository import Repository as bb_repo
+from pybitbucket.commit import Commit as bb_commit
+from pybitbucket.pullrequest import PullRequest as bb_pr
 from github import GithubException
 
 from odoo import models, fields, api, _
@@ -35,7 +38,7 @@ class VCSUser(models.Model):
             return client.get_user()
         elif self.type == 'bitbucket':
             return bitbucket.Client(
-                auth.BasicAuthenticator(
+                bb_auth.BasicAuthenticator(
                     self.username,
                     self.password,
                     self.email,
@@ -70,12 +73,16 @@ class VCSRepository(models.Model):
         return [('none', 'None')]
 
     @api.one
-    @api.constrains('name', 'user_id')
+    @api.constrains('name', 'user_id', 'related_type')
     def _check_repo(self):
-        try:
-            self.user_id._get_user().get_repo(self.name)
-        except GithubException as ge:
-            raise ValidationError(ge.data['message'])
+        if self.related_type == 'github':
+            try:
+                self.user_id._get_user().get_repo(self.name)
+            except GithubException as ge:
+                raise ValidationError(ge.data['message'])
+        elif self.related_type == 'bitbucket':
+            bb_repo.find_repository_by_name_and_owner(
+                self.name, client=self.user_id._get_user())
 
     @api.one
     def _get_repo(self):
@@ -85,6 +92,9 @@ class VCSRepository(models.Model):
                 return self.user_id._get_user().get_repo(self.name)
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
+        elif self.related_type == 'bitbucket':
+            return bb_repo.find_repository_by_name_and_owner(
+                self.name, client=self.user_id._get_user())
         else:
             raise NotImplementedError
 
@@ -158,6 +168,16 @@ class VCSBranch(models.Model):
                 return False
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
+        elif self.related_type == 'bitbucket':
+            prs = bb_pr.find_pullrequests_for_repository_by_state(
+                self.repository_id.name,
+                owner=self.repository_id.user_id.name,
+                state='OPEN'
+            )
+            for pr in prs:
+                if pr.source['branch']['name'] == self.name:
+                    return pr
+            return False
 
     @api.one
     def action_update(self):
@@ -166,19 +186,26 @@ class VCSBranch(models.Model):
             self.pull_request = pr[0].title
             self.pull_request_link = pr[0]._rawData['_links']['html']['href']
             commits = pr[0].get_commits()
-            # for commit in commits:
-            #     commit_list = self.env['vcs.commit'].search([
-            #         ('sha_string', '=', commit.sha)
-            #     ])
-            #     if not commit_list:
-            #         vcs_commit = self.env['vcs.commit'].create({
-            #             'sha_string': commit.sha,
-            #             'author': commit.raw_data['commit']['author']['name'],
-            #             'name': commit.raw_data['commit']['message'],
-            #         })
-            #         self.pr_commit_ids = (4, vcs_commit.id)
-            #     else:
-            #         self.pr_commit_ids = (4, commit_list[0].id)
+            for commit in commits:
+                commit_list = self.env['vcs.commit'].search([
+                    ('sha_string', '=', commit.sha)
+                ])
+                if not commit_list:
+                    vcs_commit = self.env['vcs.commit'].create({
+                        'sha_string': commit.sha,
+                        'author': commit.raw_data['commit']['author']['name'],
+                        'name': commit.raw_data['commit']['message'],
+                        'date': fields.Date.from_string(commit.raw_data['commit']['author']['date']),
+                    })
+                    # self.write({
+                    #     'pr_commit_ids': [(4, vcs_commit.id)]
+                    # })
+                    self.pr_commit_ids = [(4, vcs_commit.id)]
+                else:
+                    self.pr_commit_ids = [(4, commit_list[0].id)]
+                    # self.write({
+                    #     'pr_commit_ids': [(4, commit_list[0].id)],
+                    # })
         else:
             self.pull_request = "No pull requests"
         commit = self._get_branch()[0].commit
@@ -190,6 +217,8 @@ class VCSBranch(models.Model):
                 'sha_string': commit.sha,
                 'author': commit.raw_data['commit']['author']['name'],
                 'name': commit.raw_data['commit']['message'],
+                'date': fields.Date.from_string(
+                    commit.raw_data['commit']['author']['date']),
             })
             self.commit_id = vcs_commit.id
         else:
@@ -204,9 +233,13 @@ class VCSBranch(models.Model):
 
 
 class VCSCommit(models.Model):
+    """Commit model."""
     _name = 'vcs.commit'
+
+    _order = 'date desc'
 
     name = fields.Char()
     sha_string = fields.Char(string="SHA")
     branch_id = fields.Many2one('vcs.branch')
     author = fields.Char(string="Author")
+    date = fields.Date(string="Commit Date")
