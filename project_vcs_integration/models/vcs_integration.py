@@ -4,6 +4,7 @@ from pybitbucket import bitbucket, auth as bb_auth
 from pybitbucket.repository import Repository as bb_repo
 from pybitbucket.commit import Commit as bb_commit
 from pybitbucket.pullrequest import PullRequest as bb_pr
+from pybitbucket.bitbucket import HTTPError as bb_http_err
 from github import GithubException
 
 from odoo import models, fields, api, _
@@ -28,6 +29,7 @@ class VCSUser(models.Model):
     )
 
     def _get_user(self):
+        """Return user/client object from API."""
         if self.type == 'github':
             if not self.password:
                 client = github.Github(
@@ -81,8 +83,11 @@ class VCSRepository(models.Model):
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
         elif self.related_type == 'bitbucket':
-            bb_repo.find_repository_by_name_and_owner(
-                self.name, client=self.user_id._get_user())
+            try:
+                return bb_repo.find_repository_by_name_and_owner(
+                    self.name, client=self.user_id._get_user())
+            except bb_http_err as http_err:
+                raise ValidationError(http_err.message)
 
     @api.one
     def _get_repo(self):
@@ -100,16 +105,21 @@ class VCSRepository(models.Model):
 
     @api.model
     def create(self, vals):
+        """Extend to create related branches."""
         res = super(VCSRepository, self).create(vals)
-        for br in self.env['vcs.user'].browse(vals['user_id'])[0]._get_user().get_repo(vals['name']).get_branches():
-            self.env['vcs.branch'].create({
-                'name': br.name,
-                'repository_id': res.id
-            })
+        if res.related_type == 'github':
+            for br in res.user_id._get_user().get_repo(vals['name']).get_branches():
+                self.env['vcs.branch'].create({
+                    'name': br.name,
+                    'repository_id': res.id
+                })
+        elif res.related_type == 'bitbucket':
+            pass
         return res
 
 
 class VCSBranch(models.Model):
+    """Branch model."""
     _name = 'vcs.branch'
 
     name = fields.Char()
@@ -181,6 +191,7 @@ class VCSBranch(models.Model):
 
     @api.one
     def action_update(self):
+        """Update with pull request data."""
         pr = self._get_pr()
         if pr[0]:
             self.pull_request = pr[0].title
@@ -195,17 +206,13 @@ class VCSBranch(models.Model):
                         'sha_string': commit.sha,
                         'author': commit.raw_data['commit']['author']['name'],
                         'name': commit.raw_data['commit']['message'],
-                        'date': fields.Date.from_string(commit.raw_data['commit']['author']['date']),
+                        'date': fields.Date.from_string(
+                            commit.raw_data['commit']['author']['date']),
+                        'url': commit._html_url.value,
                     })
-                    # self.write({
-                    #     'pr_commit_ids': [(4, vcs_commit.id)]
-                    # })
                     self.pr_commit_ids = [(4, vcs_commit.id)]
                 else:
                     self.pr_commit_ids = [(4, commit_list[0].id)]
-                    # self.write({
-                    #     'pr_commit_ids': [(4, commit_list[0].id)],
-                    # })
         else:
             self.pull_request = "No pull requests"
         commit = self._get_branch()[0].commit
@@ -219,6 +226,7 @@ class VCSBranch(models.Model):
                 'name': commit.raw_data['commit']['message'],
                 'date': fields.Date.from_string(
                     commit.raw_data['commit']['author']['date']),
+                'url': commit._html_url.value,
             })
             self.commit_id = vcs_commit.id
         else:
@@ -240,6 +248,8 @@ class VCSCommit(models.Model):
 
     name = fields.Char()
     sha_string = fields.Char(string="SHA")
+    # TODO: branch_id might not make sense, may need to remove
     branch_id = fields.Many2one('vcs.branch')
     author = fields.Char(string="Author")
     date = fields.Date(string="Commit Date")
+    url = fields.Char(string="URL")

@@ -131,6 +131,26 @@
             </field>
         </record>
 
+        <record id="commit_form_view" model="ir.ui.view">
+            <field name="name">Commit Form View</field>
+            <field name="model">vcs.commit</field>
+            <field name="arch" type="xml">
+                <form>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="author"/>
+                        </group>
+                        <group>
+                            <field name="sha_string"/>
+                            <field name="date"/>
+                            <field name="url" widget="url"/>
+                        </group>
+                    </group>
+                </form>
+            </field>
+        </record>
+
         <record id="action_view_commits" model="ir.actions.act_window">
             <field name="res_model">vcs.commit</field>
             <field name="name">VCS Commits</field>
