@@ -59,9 +59,14 @@
                         </group>
                         <group>
                             <field name="user_id"/>
-                            <field name="main_branch"/>
                         </group>
                     </group>
+                    <notebook>
+                        <page string="Branches">
+                            <button string="Update"/>
+                            <field name="branch_ids"/>
+                        </page>
+                    </notebook>
                 </form>
             </field>
         </record>
@@ -109,6 +114,19 @@
                         </page>
                     </notebook>
                 </form>
+            </field>
+        </record>
+
+        <record id="branch_tree_view" model="ir.ui.view">
+            <field name="name">Commit Tree View</field>
+            <field name="model">vcs.commit</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="name"/>
+                    <field name="author"/>
+                    <field name="sha_string"/>
+                    <field name="date"/>
+                </tree>
             </field>
         </record>
 

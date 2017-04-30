@@ -20,12 +20,13 @@ class VCSUser(models.Model):
     """VCS user model."""
     _name = 'vcs.user'
 
-    username = fields.Char(string="Username")
+    username = fields.Char(string="Username", required=True)
     password = fields.Char(string="Password")
     email = fields.Char(string="Email")
     type = fields.Selection(
         string="Type",
-        selection=VCS_TYPE_SELECTION
+        selection=VCS_TYPE_SELECTION,
+        required=True,
     )
 
     def _get_user(self):
@@ -60,19 +61,11 @@ class VCSRepository(models.Model):
         readonly=True,
         store=True
     )
-    main_branch = fields.Selection(
-        selection=lambda s: s._get_branch_selection())
-    # branch_ids = fields.One2many('branch.github')
-
-    @api.depends('user_id')
-    def _get_branch_selection(self):
-        # TODO: doesn't work
-        if self.user_id:
-            branch_selection = []
-            for b in self.user_id._get_user().get_repos()[0].get_branches():
-                branch_selection.append(b.name, b.name)
-            return branch_selection
-        return [('none', 'None')]
+    branch_ids = fields.One2many(
+        'vcs.branch',
+        'repository_id',
+        readonly=True,
+    )
 
     @api.one
     @api.constrains('name', 'user_id', 'related_type')
@@ -109,10 +102,11 @@ class VCSRepository(models.Model):
         res = super(VCSRepository, self).create(vals)
         if res.related_type == 'github':
             for br in res.user_id._get_user().get_repo(vals['name']).get_branches():
-                self.env['vcs.branch'].create({
+                br_res = self.env['vcs.branch'].create({
                     'name': br.name,
-                    'repository_id': res.id
+                    'repository_id': res.id,
                 })
+                res.branch_ids = [(4, br_res.id)]
         elif res.related_type == 'bitbucket':
             pass
         return res
@@ -123,7 +117,10 @@ class VCSBranch(models.Model):
     _name = 'vcs.branch'
 
     name = fields.Char()
-    repository_id = fields.Many2one('vcs.repository')
+    repository_id = fields.Many2one(
+        'vcs.repository',
+        required=True,
+    )
     related_type = fields.Selection(
         string="Type",
         selection=VCS_TYPE_SELECTION,
@@ -147,7 +144,7 @@ class VCSBranch(models.Model):
                 return self.repository_id._get_repo()[0].get_branch(self.name)
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
-        else:
+        elif self.related_type == 'bitbucket':
             raise NotImplementedError
 
     @api.one
@@ -168,6 +165,7 @@ class VCSBranch(models.Model):
 
     @api.one
     def _get_pr(self):
+        """Return Pull Request if it exists, False otherwise."""
         if self.related_type == 'github':
             try:
                 for pr in self.repository_id._get_repo()[0].get_pulls():
