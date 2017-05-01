@@ -194,7 +194,7 @@ class VCSBranch(models.Model):
     commit_id = fields.Many2one('vcs.commit', string="Latest Commit")
     related_commit_author = fields.Char(related='commit_id.author')
     related_commit_sha_string = fields.Char(related='commit_id.sha_string')
-    pr_commit_ids = fields.One2many('vcs.commit', 'branch_id')
+    pr_commit_ids = fields.One2many('vcs.commit', 'branch_id', readonly=True)
     pull_request = fields.Char(string="Pull Request", readonly=True)
     pull_request_link = fields.Char(
         string="Link to Pull Request", readonly=True)
@@ -236,12 +236,12 @@ class VCSBranch(models.Model):
                 raise ValidationError(ge.data['message'])
         elif self.related_type == 'bitbucket':
             # TODO: this is a generator object of ALL commits on that branch
-            for i, commit in enumerate(self._get_branch().commits()):
-                commit_list = []
+            commit_list = []
+            for i, commit in enumerate(self._get_branch()[0].commits()):
                 if i > count:
                     break
                 commit_list.append(commit)
-                return commit_list
+            return commit_list
         raise NotImplementedError
 
     @api.one
@@ -313,52 +313,32 @@ class VCSBranch(models.Model):
             else:
                 self.commit_id = commits[0].id
         elif self.related_type == 'bitbucket':
-            print pr
             # TODO: implement for bitbucket
             if pr[0]:
                 self.pull_request = pr[0].title
                 self.pull_request_link = pr[0].links['html']['href']
-            #     commits = pr[0].get_commits()
-            #     for commit in commits:
-            #         commit_list = self.env['vcs.commit'].search([
-            #             ('sha_string', '=', commit.sha)
-            #         ])
-            #         if not commit_list:
-            #             vcs_commit = self.env['vcs.commit'].create({
-            #                 'sha_string': commit.sha,
-            #                 'author':
-            #                     commit.raw_data['commit']['author'][
-            #                         'name'],
-            #                 'name': commit.raw_data['commit'][
-            #                     'message'],
-            #                 'date': fields.Date.from_string(
-            #                     commit.raw_data['commit']['author'][
-            #                         'date']),
-            #                 'url': commit._html_url.value,
-            #             })
-            #             self.pr_commit_ids = [(4, vcs_commit.id)]
-            #         else:
-            #             self.pr_commit_ids = [(4, commit_list[0].id)]
-            # else:
-            #     self.pull_request = "No pull requests"
-            # commit = self._get_branch()[0].commit
-            # commits = self.env['vcs.commit'].search([
-            #     ('sha_string', '=', commit.sha)
-            # ])
-            # if not commits:
-            #     vcs_commit = self.env['vcs.commit'].create({
-            #         'sha_string': commit.sha,
-            #         'author': commit.raw_data['commit']['author'][
-            #             'name'],
-            #         'name': commit.raw_data['commit']['message'],
-            #         'date': fields.Date.from_string(
-            #             commit.raw_data['commit']['author']['date']),
-            #         'url': commit._html_url.value,
-            #     })
-            #     self.commit_id = vcs_commit.id
-            # else:
-            #     self.commit_id = commits[0].id
-
+            else:
+                self.pull_request = "No pull requests"
+            # Bitbucket does not require a PR to get branch commits
+            # TODO: The list of commits is wrapped inside another list
+            commits = self._get_commits()[0]
+            for commit in commits:
+                commit_list = self.env['vcs.commit'].search([
+                    ('sha_string', '=', commit.hash)
+                ])
+                if not commit_list:
+                    vcs_commit = self.env['vcs.commit'].create({
+                        'sha_string': commit.hash,
+                        'author': commit.author.display_name,
+                        'name': commit.message,
+                        'date': fields.Date.from_string(commit.date),
+                        'url': commit.links['html']['href'],
+                    })
+                    self.pr_commit_ids = [(4, vcs_commit.id)]
+                else:
+                    self.pr_commit_ids = [(4, commit_list[0].id)]
+            self.commit_id = sorted(
+                self.pr_commit_ids, key=lambda x: x.date, reverse=True)[0]
 
     # PR: notes
     # state: pr._state.value

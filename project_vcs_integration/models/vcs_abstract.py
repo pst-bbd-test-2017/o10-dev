@@ -2,7 +2,7 @@
 
 from odoo import fields, models, api
 
-# Ideas for abstraction, no included in __init__
+# Ideas for abstraction, not included in __init__
 class VCSIntegrationAbstract(models.AbstractModel):
     """Abstract model for VCS integration."""
 

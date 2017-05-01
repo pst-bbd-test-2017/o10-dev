@@ -4,7 +4,7 @@
 
 {
     'name': 'Project Management Integration with CVS',
-    'version': '0.5.0',
+    'version': '0.6.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """

@@ -24,6 +24,17 @@
             <field name="model">project.task</field>
             <field name="inherit_id" ref="project.view_task_form2"/>
             <field name="arch" type="xml">
+                <field name="progress" position="after">
+                    <field
+                            name="related_pull_request"
+                            attrs="{'invisible': ['|', ('branch_id', '=', False), ('related_pull_request', '=', False)]}"
+                    />
+                    <field
+                            name="related_pull_request_url"
+                            widget="url"
+                            attrs="{'invisible': ['|', ('branch_id', '=', False), ('related_pull_request', '=', False)]}"
+                    />
+                </field>
                 <notebook position="inside">
                     <page string="VCS">
                         <group>
@@ -34,6 +45,9 @@
                         </group>
                     </page>
                 </notebook>
+                <field name="timesheet_ids" position="attributes">
+                    <attribute name="context">{'default_project_id': project_id, 'default_task_id': id}</attribute>
+                </field>
             </field>
         </record>
 
