@@ -3,6 +3,7 @@ import github
 from pybitbucket import bitbucket, auth as bb_auth
 from pybitbucket.repository import Repository as bb_repo
 from pybitbucket.commit import Commit as bb_commit
+from pybitbucket.ref import Branch as bb_branch
 from pybitbucket.pullrequest import PullRequest as bb_pr
 from pybitbucket.bitbucket import HTTPError as bb_http_err
 from github import GithubException
@@ -20,6 +21,7 @@ class VCSUser(models.Model):
     """VCS user model."""
     _name = 'vcs.user'
 
+    name = fields.Char(string="Name")
     username = fields.Char(string="Username", required=True)
     password = fields.Char(string="Password")
     email = fields.Char(string="Email")
@@ -44,7 +46,7 @@ class VCSUser(models.Model):
                 bb_auth.BasicAuthenticator(
                     self.username,
                     self.password,
-                    self.email,
+                    'pybitbucket@mailinator.com',
                 ))
 
 
@@ -66,9 +68,16 @@ class VCSRepository(models.Model):
         'repository_id',
         readonly=True,
     )
+    owner = fields.Char()
+
+    @api.onchange('user_id')
+    def _onchange_user_id(self):
+        """Set repository owner to username."""
+        if self.user_id:
+            self.owner = self.user_id.username
 
     @api.one
-    @api.constrains('name', 'user_id', 'related_type')
+    @api.constrains('name', 'user_id', 'related_type', 'owner')
     def _check_repo(self):
         if self.related_type == 'github':
             try:
@@ -78,7 +87,10 @@ class VCSRepository(models.Model):
         elif self.related_type == 'bitbucket':
             try:
                 return bb_repo.find_repository_by_name_and_owner(
-                    self.name, client=self.user_id._get_user())
+                    self.name.lower(),
+                    owner=self.owner,
+                    client=self.user_id._get_user()
+                )
             except bb_http_err as http_err:
                 raise ValidationError(http_err.message)
 
@@ -87,14 +99,55 @@ class VCSRepository(models.Model):
         """Get repository object from API."""
         if self.related_type == 'github':
             try:
+                # Returns as a list with 1 element
                 return self.user_id._get_user().get_repo(self.name)
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
         elif self.related_type == 'bitbucket':
             return bb_repo.find_repository_by_name_and_owner(
-                self.name, client=self.user_id._get_user())
+                self.name,
+                owner=self.owner,
+                client=self.user_id._get_user()
+            )
         else:
             raise NotImplementedError
+
+    @api.one
+    def action_update(self):
+        """Update repository data (branches)."""
+        if self.related_type == 'github':
+            local_branches = [br.name for br in self.branch_ids]
+            remote_branches = []
+            for b in self._get_repo()[0].get_branches():
+                remote_branches.append(b.name)
+                if b.name not in local_branches:
+                    print b.name
+                    br_res = self.env['vcs.branch'].create({
+                        'name': b.name,
+                        'repository_id': self.id
+                    })
+                    self.branch_ids = [(4, br_res.id)]
+            for br in self.branch_ids:
+                if br.name not in remote_branches:
+                    br.unlink()
+        elif self.related_type == 'bitbucket':
+            local_branches = [br.name for br in self.branch_ids]
+            remote_branches = []
+            for b in bb_branch.find_branches_in_repository(
+                    self.name.lower(),
+                    owner=self.owner,
+                    client=self.user_id._get_user()
+            ):
+                remote_branches.append(b.name)
+                if b.name not in local_branches:
+                    br_res = self.env['vcs.branch'].create({
+                        'name': b.name,
+                        'repository_id': self.id
+                    })
+                    self.branch_ids = [(4, br_res.id)]
+            for br in self.branch_ids:
+                if br.name not in remote_branches:
+                    br.unlink()
 
     @api.model
     def create(self, vals):
@@ -108,7 +161,16 @@ class VCSRepository(models.Model):
                 })
                 res.branch_ids = [(4, br_res.id)]
         elif res.related_type == 'bitbucket':
-            pass
+            for b in bb_branch.find_branches_in_repository(
+                    res.name.lower(),
+                    owner=res.owner,
+                    client=res.user_id._get_user()
+            ):
+                br_res = self.env['vcs.branch'].create({
+                    'name': b.name,
+                    'repository_id': res.id
+                })
+                res.branch_ids = [(4, br_res.id)]
         return res
 
 
@@ -120,6 +182,7 @@ class VCSBranch(models.Model):
     repository_id = fields.Many2one(
         'vcs.repository',
         required=True,
+        ondelete='cascade',
     )
     related_type = fields.Selection(
         string="Type",
@@ -136,6 +199,7 @@ class VCSBranch(models.Model):
     pull_request_link = fields.Char(
         string="Link to Pull Request", readonly=True)
 
+    # TODO: branches in bitbucket are Ref (base type for tag and branch)
     @api.one
     def _get_branch(self):
         if self.related_type == 'github':
@@ -145,7 +209,16 @@ class VCSBranch(models.Model):
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
         elif self.related_type == 'bitbucket':
-            raise NotImplementedError
+            try:
+                return bb_branch.find_branch_by_ref_name_in_repository(
+                    self.name,
+                    self.repository_id.name.lower(),
+                    owner=self.repository_id.owner,
+                    client=self.repository_id.user_id._get_user(),
+                )
+            except Exception as e:
+                raise ValidationError(e)
+        raise NotImplementedError
 
     @api.one
     def _get_commits(self, count=5):
@@ -161,6 +234,14 @@ class VCSBranch(models.Model):
                     return commit_list
             except GithubException as ge:
                 raise ValidationError(ge.data['message'])
+        elif self.related_type == 'bitbucket':
+            # TODO: this is a generator object of ALL commits on that branch
+            for i, commit in enumerate(self._get_branch().commits()):
+                commit_list = []
+                if i > count:
+                    break
+                commit_list.append(commit)
+                return commit_list
         raise NotImplementedError
 
     @api.one
@@ -178,12 +259,13 @@ class VCSBranch(models.Model):
                 raise ValidationError(ge.data['message'])
         elif self.related_type == 'bitbucket':
             prs = bb_pr.find_pullrequests_for_repository_by_state(
-                self.repository_id.name,
-                owner=self.repository_id.user_id.name,
+                self.repository_id.name.lower(),
+                owner=self.repository_id.owner,
+                client=self.repository_id.user_id._get_user(),
                 state='OPEN'
             )
             for pr in prs:
-                if pr.source['branch']['name'] == self.name:
+                if hasattr(pr, 'source') and pr.source['branch']['name'] == self.name:
                     return pr
             return False
 
@@ -191,44 +273,93 @@ class VCSBranch(models.Model):
     def action_update(self):
         """Update with pull request data."""
         pr = self._get_pr()
-        if pr[0]:
-            self.pull_request = pr[0].title
-            self.pull_request_link = pr[0]._rawData['_links']['html']['href']
-            commits = pr[0].get_commits()
-            for commit in commits:
-                commit_list = self.env['vcs.commit'].search([
-                    ('sha_string', '=', commit.sha)
-                ])
-                if not commit_list:
-                    vcs_commit = self.env['vcs.commit'].create({
-                        'sha_string': commit.sha,
-                        'author': commit.raw_data['commit']['author']['name'],
-                        'name': commit.raw_data['commit']['message'],
-                        'date': fields.Date.from_string(
-                            commit.raw_data['commit']['author']['date']),
-                        'url': commit._html_url.value,
-                    })
-                    self.pr_commit_ids = [(4, vcs_commit.id)]
-                else:
-                    self.pr_commit_ids = [(4, commit_list[0].id)]
-        else:
-            self.pull_request = "No pull requests"
-        commit = self._get_branch()[0].commit
-        commits = self.env['vcs.commit'].search([
-            ('sha_string', '=', commit.sha)
-        ])
-        if not commits:
-            vcs_commit = self.env['vcs.commit'].create({
-                'sha_string': commit.sha,
-                'author': commit.raw_data['commit']['author']['name'],
-                'name': commit.raw_data['commit']['message'],
-                'date': fields.Date.from_string(
-                    commit.raw_data['commit']['author']['date']),
-                'url': commit._html_url.value,
-            })
-            self.commit_id = vcs_commit.id
-        else:
-            self.commit_id = commits[0].id
+        if self.related_type == 'github':
+            if pr[0]:
+                self.pull_request = pr[0].title
+                self.pull_request_link = pr[0]._rawData['_links']['html']['href']
+                commits = pr[0].get_commits()
+                for commit in commits:
+                    commit_list = self.env['vcs.commit'].search([
+                        ('sha_string', '=', commit.sha)
+                    ])
+                    if not commit_list:
+                        vcs_commit = self.env['vcs.commit'].create({
+                            'sha_string': commit.sha,
+                            'author': commit.raw_data['commit']['author']['name'],
+                            'name': commit.raw_data['commit']['message'],
+                            'date': fields.Date.from_string(
+                                commit.raw_data['commit']['author']['date']),
+                            'url': commit._html_url.value,
+                        })
+                        self.pr_commit_ids = [(4, vcs_commit.id)]
+                    else:
+                        self.pr_commit_ids = [(4, commit_list[0].id)]
+            else:
+                self.pull_request = "No pull requests"
+            commit = self._get_branch()[0].commit
+            commits = self.env['vcs.commit'].search([
+                ('sha_string', '=', commit.sha)
+            ])
+            if not commits:
+                vcs_commit = self.env['vcs.commit'].create({
+                    'sha_string': commit.sha,
+                    'author': commit.raw_data['commit']['author']['name'],
+                    'name': commit.raw_data['commit']['message'],
+                    'date': fields.Date.from_string(
+                        commit.raw_data['commit']['author']['date']),
+                    'url': commit._html_url.value,
+                })
+                self.commit_id = vcs_commit.id
+            else:
+                self.commit_id = commits[0].id
+        elif self.related_type == 'bitbucket':
+            print pr
+            # TODO: implement for bitbucket
+            if pr[0]:
+                self.pull_request = pr[0].title
+                self.pull_request_link = pr[0].links['html']['href']
+            #     commits = pr[0].get_commits()
+            #     for commit in commits:
+            #         commit_list = self.env['vcs.commit'].search([
+            #             ('sha_string', '=', commit.sha)
+            #         ])
+            #         if not commit_list:
+            #             vcs_commit = self.env['vcs.commit'].create({
+            #                 'sha_string': commit.sha,
+            #                 'author':
+            #                     commit.raw_data['commit']['author'][
+            #                         'name'],
+            #                 'name': commit.raw_data['commit'][
+            #                     'message'],
+            #                 'date': fields.Date.from_string(
+            #                     commit.raw_data['commit']['author'][
+            #                         'date']),
+            #                 'url': commit._html_url.value,
+            #             })
+            #             self.pr_commit_ids = [(4, vcs_commit.id)]
+            #         else:
+            #             self.pr_commit_ids = [(4, commit_list[0].id)]
+            # else:
+            #     self.pull_request = "No pull requests"
+            # commit = self._get_branch()[0].commit
+            # commits = self.env['vcs.commit'].search([
+            #     ('sha_string', '=', commit.sha)
+            # ])
+            # if not commits:
+            #     vcs_commit = self.env['vcs.commit'].create({
+            #         'sha_string': commit.sha,
+            #         'author': commit.raw_data['commit']['author'][
+            #             'name'],
+            #         'name': commit.raw_data['commit']['message'],
+            #         'date': fields.Date.from_string(
+            #             commit.raw_data['commit']['author']['date']),
+            #         'url': commit._html_url.value,
+            #     })
+            #     self.commit_id = vcs_commit.id
+            # else:
+            #     self.commit_id = commits[0].id
+
+
     # PR: notes
     # state: pr._state.value
     # SHA: pr._base.sha
@@ -246,8 +377,9 @@ class VCSCommit(models.Model):
 
     name = fields.Char()
     sha_string = fields.Char(string="SHA")
-    # TODO: branch_id might not make sense, may need to remove
-    branch_id = fields.Many2one('vcs.branch')
+    # TODO: branch_id might not make sense as a commit may belong to several
+    # branches, may need to remove or make many2many
+    branch_id = fields.Many2one('vcs.branch', ondelete='cascade')
     author = fields.Char(string="Author")
     date = fields.Date(string="Commit Date")
     url = fields.Char(string="URL")

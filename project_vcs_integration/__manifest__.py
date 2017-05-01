@@ -4,18 +4,19 @@
 
 {
     'name': 'Project Management Integration with CVS',
-    'version': '0.4.0',
+    'version': '0.5.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """
-	Integration of projects and tasks with git repositories.
+	Integration of projects, tasks and timesheets with git repositories.
 	""",
     'author': 'Paulius Stundžia',
     'website': '',
     'external_dependencies': {
         'python': ['github', 'pybitbucket']},
     'depends': [     
-        'project'
+        'project',
+        'hr_timesheet'
     ],
     'data': [
         'views/repository_views.xml',

@@ -28,6 +28,7 @@
                     <page string="VCS">
                         <group>
                             <group>
+                                <field name="related_repository_id" invisible="1"/>
                                 <field name="branch_id"/>
                             </group>
                         </group>
