@@ -375,3 +375,23 @@ class VCSCommit(models.Model):
     author = fields.Char(string="Author")
     date = fields.Date(string="Commit Date")
     url = fields.Char(string="URL")
+    in_timesheets = fields.Boolean()
+
+    @api.multi
+    def to_timesheet(self):
+        print "to timesheet called"
+        task_id = self._context.get('task_id')
+        print self.id
+        return {
+            'name': _('Add to TS'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'commit.add.timesheet.wizard',
+            'view_type': 'form',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'commit_id': self.id,
+                'commit_msg': self.name.split('\n')[0],
+                'task_id': task_id,
+            }
+        }

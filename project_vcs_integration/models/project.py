@@ -28,13 +28,14 @@ class ProjectTask(models.Model):
         string="Pull Request URL",
         related='branch_id.pull_request_link'
     )
-    related_commit_ids = fields.One2many(
+    related_commit_ids = fields.Many2many(
         'vcs.commit', related='branch_id.commit_ids')
 
     @api.one
     def action_update_branch(self):
         if self.branch_id:
             self.branch_id.action_update()
+
 
 class AccountAnalyticLine(models.Model):
     _inherit = 'account.analytic.line'
@@ -48,7 +49,8 @@ class AccountAnalyticLine(models.Model):
             if self.task_id.project_id != self.project_id:
                 self.task_id = False
 
-    @api.onchange('task_id')
-    def onchange_task_id(self):
-        if self.task_id.branch_id.commit_id:
-            self.name = self.task_id.branch_id.commit_id.name.split('\n')[0]
+    # TODO: irrelevant, remove once sure
+    # @api.onchange('task_id')
+    # def onchange_task_id(self):
+    #     if self.task_id.branch_id.commit_id:
+    #         self.name = self.task_id.branch_id.commit_id.name.split('\n')[0]

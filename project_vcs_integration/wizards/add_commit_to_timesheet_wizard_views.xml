@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_add_commit_to_timesheet_wizard" model="ir.ui.view">
+            <field name="name">asset.depreciation.confirmation.wizard</field>
+            <field name="model">commit.add.timesheet.wizard</field>
+            <field name="arch" type="xml">
+                <form string="Add to Timesheet">
+                    <div>
+                        <p>
+                            This wizard will post installment/depreciation lines for the selected month.<br/>
+                            This will generate journal entries for all related installment lines on this period of asset/revenue recognition as well.
+                        </p>
+                    </div>
+                    <group>
+                        <field name="time_spent" widget="float_time"/>
+                    </group>
+                    <footer>
+                        <button string="Add to Timesheets" name="create_timesheet_line" type="object" class="btn-primary"/>
+                        <button string="Cancel" class="btn-default" special="cancel"/>
+                    </footer>
+                </form>
+             </field>
+        </record>
+
+        <record id="action_add_commit_to_timesheet_wizard" model="ir.actions.act_window">
+            <field name="name">Add Commit to Timesheet</field>
+            <field name="res_model">commit.add.timesheet.wizard</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_add_commit_to_timesheet_wizard"/>
+            <field name="target">new</field>
+            <field name="context">{'task_id': active_id, 'branch_id': branch_id}</field>
+        </record>
+
+    </data>
+</odoo>

@@ -21,5 +21,6 @@
     'data': [
         'views/repository_views.xml',
         'views/project_views.xml',
+        'wizards/add_commit_to_timesheet_wizard_views.xml',
     ],
 }

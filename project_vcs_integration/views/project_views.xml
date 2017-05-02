@@ -48,7 +48,21 @@
                                 />
                             </group>
                         </group>
-                        <field name="related_commit_ids"/>
+                        <field name="related_commit_ids" context="{'task_id': id}">
+                            <tree>
+                                <field name="date"/>
+                                <field name="author"/>
+                                <field name="name"/>
+                                <field name="sha_string"/>
+                                <field name="in_timesheets" invisible="1"/>
+                                <button
+                                        type="object"
+                                        string="To Timesheet"
+                                        name="to_timesheet"
+                                        attrs="{'invisible': [('in_timesheets', '=', True)]}"
+                                />
+                            </tree>
+                        </field>
                     </page>
                 </notebook>
                 <field name="timesheet_ids" position="attributes">
