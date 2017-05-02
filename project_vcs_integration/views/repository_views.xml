@@ -112,12 +112,12 @@
                         <field name="related_commit_sha_string"/>
                         <field name="related_commit_author"/>
                     </group>
-                    <notebook attrs="{'invisible': [('pr_commit_ids', '=', [])]}">
+                    <notebook attrs="{'invisible': [('commit_ids', '=', [])]}">
                         <page
-                                string="Pull Request Commits"
-                                attrs="{'invisible': [('pr_commit_ids', '=', [])]}"
+                                string="Commits"
+                                attrs="{'invisible': [('commit_ids', '=', [])]}"
                         >
-                            <field name="pr_commit_ids"/>
+                            <field name="commit_ids"/>
                         </page>
                     </notebook>
                 </form>

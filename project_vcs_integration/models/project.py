@@ -28,7 +28,13 @@ class ProjectTask(models.Model):
         string="Pull Request URL",
         related='branch_id.pull_request_link'
     )
+    related_commit_ids = fields.One2many(
+        'vcs.commit', related='branch_id.commit_ids')
 
+    @api.one
+    def action_update_branch(self):
+        if self.branch_id:
+            self.branch_id.action_update()
 
 class AccountAnalyticLine(models.Model):
     _inherit = 'account.analytic.line'

@@ -194,7 +194,7 @@ class VCSBranch(models.Model):
     commit_id = fields.Many2one('vcs.commit', string="Latest Commit")
     related_commit_author = fields.Char(related='commit_id.author')
     related_commit_sha_string = fields.Char(related='commit_id.sha_string')
-    pr_commit_ids = fields.One2many('vcs.commit', 'branch_id', readonly=True)
+    commit_ids = fields.Many2many('vcs.commit', 'branch_ids', readonly=True)
     pull_request = fields.Char(string="Pull Request", readonly=True)
     pull_request_link = fields.Char(
         string="Link to Pull Request", readonly=True)
@@ -280,29 +280,37 @@ class VCSBranch(models.Model):
                 commits = pr[0].get_commits()
                 for commit in commits:
                     commit_list = self.env['vcs.commit'].search([
-                        ('sha_string', '=', commit.sha)
+                        ('sha_string', '=', commit.sha),
+                        ('type', '=', 'github')
                     ])
                     if not commit_list:
                         vcs_commit = self.env['vcs.commit'].create({
                             'sha_string': commit.sha,
+                            'type': 'github',
+                            'branch_ids': [(4, self.id)],
                             'author': commit.raw_data['commit']['author']['name'],
                             'name': commit.raw_data['commit']['message'],
                             'date': fields.Date.from_string(
                                 commit.raw_data['commit']['author']['date']),
                             'url': commit._html_url.value,
                         })
-                        self.pr_commit_ids = [(4, vcs_commit.id)]
+                        self.commit_ids = [(4, vcs_commit.id)]
                     else:
-                        self.pr_commit_ids = [(4, commit_list[0].id)]
+                        self.commit_ids = [(4, commit_list[0].id)]
             else:
                 self.pull_request = "No pull requests"
             commit = self._get_branch()[0].commit
             commits = self.env['vcs.commit'].search([
-                ('sha_string', '=', commit.sha)
+                ('sha_string', '=', commit.sha),
+                ('type', '=', 'github'),
             ])
+            if commits and self.id not in commits[0].branch_ids:
+                commits[0].branch_ids = [(4, self.id)]
             if not commits:
                 vcs_commit = self.env['vcs.commit'].create({
                     'sha_string': commit.sha,
+                    'type': 'github',
+                    'branch_ids': [(4, self.id)],
                     'author': commit.raw_data['commit']['author']['name'],
                     'name': commit.raw_data['commit']['message'],
                     'date': fields.Date.from_string(
@@ -324,21 +332,24 @@ class VCSBranch(models.Model):
             commits = self._get_commits()[0]
             for commit in commits:
                 commit_list = self.env['vcs.commit'].search([
-                    ('sha_string', '=', commit.hash)
+                    ('sha_string', '=', commit.hash),
+                    ('type', '=', 'bitbucket')
                 ])
                 if not commit_list:
                     vcs_commit = self.env['vcs.commit'].create({
                         'sha_string': commit.hash,
+                        'branch_ids': [(4, self.id)],
+                        'type': 'bitbucket',
                         'author': commit.author.display_name,
                         'name': commit.message,
                         'date': fields.Date.from_string(commit.date),
                         'url': commit.links['html']['href'],
                     })
-                    self.pr_commit_ids = [(4, vcs_commit.id)]
+                    self.commit_ids = [(4, vcs_commit.id)]
                 else:
-                    self.pr_commit_ids = [(4, commit_list[0].id)]
+                    self.commit_ids = [(4, commit_list[0].id)]
             self.commit_id = sorted(
-                self.pr_commit_ids, key=lambda x: x.date, reverse=True)[0]
+                self.commit_ids, key=lambda x: x.date, reverse=True)[0]
 
     # PR: notes
     # state: pr._state.value
@@ -357,9 +368,10 @@ class VCSCommit(models.Model):
 
     name = fields.Char()
     sha_string = fields.Char(string="SHA")
+    type = fields.Selection(selection=VCS_TYPE_SELECTION)
     # TODO: branch_id might not make sense as a commit may belong to several
     # branches, may need to remove or make many2many
-    branch_id = fields.Many2one('vcs.branch', ondelete='cascade')
+    branch_ids = fields.Many2many('vcs.branch', ondelete='cascade')
     author = fields.Char(string="Author")
     date = fields.Date(string="Commit Date")
     url = fields.Char(string="URL")
