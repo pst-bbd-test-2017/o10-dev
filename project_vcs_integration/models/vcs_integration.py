@@ -23,8 +23,7 @@ class VCSUser(models.Model):
 
     name = fields.Char(string="Name")
     username = fields.Char(string="Username", required=True)
-    password = fields.Char(string="Password")
-    email = fields.Char(string="Email")
+    password = fields.Char(string="Password", copy=False)
     type = fields.Selection(
         string="Type",
         selection=VCS_TYPE_SELECTION,
@@ -36,7 +35,7 @@ class VCSUser(models.Model):
         if self.type == 'github':
             if not self.password:
                 client = github.Github(
-                    self.username)
+                    login_or_token=self.username)
             else:
                 client = github.Github(
                     login_or_token=self.username, password=self.password)
@@ -44,9 +43,9 @@ class VCSUser(models.Model):
         elif self.type == 'bitbucket':
             return bitbucket.Client(
                 bb_auth.BasicAuthenticator(
-                    self.username,
-                    self.password,
-                    'pybitbucket@mailinator.com',
+                    username=self.username,
+                    password=self.password,
+                    client_email='pybitbucket@mailinator.com',
                 ))
 
 
@@ -304,7 +303,7 @@ class VCSBranch(models.Model):
                 ('sha_string', '=', commit.sha),
                 ('type', '=', 'github'),
             ])
-            if commits and self.id not in commits[0].branch_ids:
+            if commits and self.id not in commits[0].branch_ids.ids:
                 commits[0].branch_ids = [(4, self.id)]
             if not commits:
                 vcs_commit = self.env['vcs.commit'].create({

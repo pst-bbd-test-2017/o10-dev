@@ -4,7 +4,7 @@
 
 {
     'name': 'Project Management Integration with CVS',
-    'version': '0.7.0',
+    'version': '0.7.1',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """
@@ -21,6 +21,7 @@
     'data': [
         'views/repository_views.xml',
         'views/project_views.xml',
+        'views/project_vcs_config_settings_views.xml',
         'wizards/add_commit_to_timesheet_wizard_views.xml',
     ],
 }
