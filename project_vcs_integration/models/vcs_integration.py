@@ -53,7 +53,7 @@ class VCSRepository(models.Model):
     """VCS repository model."""
     _name = 'vcs.repository'
 
-    user_id = fields.Many2one('vcs.user', required=True)
+    user_id = fields.Many2one('vcs.user', string="VCS User", required=True)
     name = fields.Char(string="Name", required=True)
     related_type = fields.Selection(
         string="Type",
@@ -67,7 +67,7 @@ class VCSRepository(models.Model):
         'repository_id',
         readonly=True,
     )
-    owner = fields.Char()
+    owner = fields.Char(string="Owner")
 
     @api.onchange('user_id')
     def _onchange_user_id(self):
@@ -78,6 +78,7 @@ class VCSRepository(models.Model):
     @api.one
     @api.constrains('name', 'user_id', 'related_type', 'owner')
     def _check_repo(self):
+        """Check if the repository exists on the hosting site."""
         if self.related_type == 'github':
             try:
                 self.user_id._get_user().get_repo(self.name)

@@ -35,6 +35,19 @@
             parent="vcs_config"
         />
 
+        <record id="action_view_users" model="ir.actions.act_window">
+            <field name="res_model">vcs.user</field>
+            <field name="name">VCS Users</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <menuitem name="Users"
+          action="action_view_users"
+          id="menu_action_view_users"
+          parent="repo_config"
+          sequence="1"/>
+
         <record id="action_view_repositories" model="ir.actions.act_window">
             <field name="res_model">vcs.repository</field>
             <field name="name">VCS Repositories</field>
@@ -60,7 +73,7 @@
                         </group>
                         <group>
                             <field name="user_id"/>
-                            <field name="owner"/>
+                            <field name="owner" attrs="{'invisible': [('related_type', '!=', 'bitbucket')]}"/>
                         </group>
                     </group>
                     <notebook>
