@@ -21,6 +21,8 @@ class CommitAddTimesheetWizard(models.TransientModel):
             'name': commit_msg,
             'unit_amount': self.time_spent,
         })
+        # Set in_timesheets True for the entered commit to avoid multiple entries
+        # for the same commit.
         self.env['vcs.commit'].browse(
             ctx.get('active_id')).in_timesheets = True
         # TODO: it's quicker to enter commits into timesheets without the

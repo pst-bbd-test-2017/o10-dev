@@ -3,8 +3,8 @@
 # See LICENSE file for full copyright and licensing details.
 
 {
-    'name': 'Project Management Integration with CVS',
-    'version': '0.8.0',
+    'name': 'Project Management Integration with VCS',
+    'version': '0.9.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """

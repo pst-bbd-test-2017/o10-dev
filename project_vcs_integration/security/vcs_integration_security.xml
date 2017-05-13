@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+
+        <record id="account_analytic_segment_aa_from_aa" model="res.groups">
+            <field name="name">Create Analytic from Analytic</field>
+            <field name="category_id" ref="account_analytic_segment.analytic_segments_module_category"/>
+            <field name="users" eval="[(4, ref('base.user_root'))]"/>
+        </record>
+
+    </data>
+</odoo>

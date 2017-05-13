@@ -7,16 +7,18 @@
             <field name="model">vcs.user</field>
             <field name="arch" type="xml">
                 <form>
-                    <group>
-                        <field name="name"/>
+                    <sheet>
                         <group>
-                            <field name="username"/>
-                            <field name="type"/>
+                            <field name="name"/>
+                            <group>
+                                <field name="username"/>
+                                <field name="type"/>
+                            </group>
+                            <group>
+                                <field name="password" password="True"/>
+                            </group>
                         </group>
-                        <group>
-                            <field name="password" password="True"/>
-                        </group>
-                    </group>
+                    </sheet>
                 </form>
             </field>
         </record>
@@ -28,7 +30,7 @@
             parent="project.menu_main_pm"
         />
 
-        <menuitem name="Repository Config"
+        <menuitem name="VCS Configuration"
             id="repo_config"
             groups="project.group_project_manager,project.group_project_user"
             web_icon="project,static/description/icon.png"

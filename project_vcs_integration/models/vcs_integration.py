@@ -379,9 +379,7 @@ class VCSCommit(models.Model):
 
     @api.multi
     def to_timesheet(self):
-        print "to timesheet called"
         task_id = self._context.get('task_id')
-        print self.id
         return {
             'name': _('Add to TS'),
             'type': 'ir.actions.act_window',

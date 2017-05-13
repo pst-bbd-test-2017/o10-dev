@@ -9,8 +9,7 @@
                 <form string="Add to Timesheet">
                     <div>
                         <p>
-                            This wizard will post installment/depreciation lines for the selected month.<br/>
-                            This will generate journal entries for all related installment lines on this period of asset/revenue recognition as well.
+                            This wizard will post the first line of the commit message as a timesheet entry on this task with the provided time spent at the current date.<br/>
                         </p>
                     </div>
                     <group>
