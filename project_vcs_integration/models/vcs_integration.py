@@ -130,6 +130,8 @@ class VCSRepository(models.Model):
             for br in self.branch_ids:
                 if br.name not in remote_branches:
                     br.unlink()
+                else:
+                    br.action_update()
         elif self.related_type == 'bitbucket':
             local_branches = [br.name for br in self.branch_ids]
             remote_branches = []
@@ -148,6 +150,8 @@ class VCSRepository(models.Model):
             for br in self.branch_ids:
                 if br.name not in remote_branches:
                     br.unlink()
+                else:
+                    br.action_update()
 
     @api.model
     def create(self, vals):
@@ -171,6 +175,7 @@ class VCSRepository(models.Model):
                     'repository_id': res.id
                 })
                 res.branch_ids = [(4, br_res.id)]
+        res.action_update()
         return res
 
 
@@ -366,7 +371,7 @@ class VCSCommit(models.Model):
 
     _order = 'date desc'
 
-    name = fields.Char()
+    name = fields.Text()
     sha_string = fields.Char(string="SHA")
     type = fields.Selection(selection=VCS_TYPE_SELECTION)
     # TODO: branch_id might not make sense as a commit may belong to several

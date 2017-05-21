@@ -27,7 +27,8 @@ class CommitAddTimesheetWizard(models.TransientModel):
             ctx.get('active_id')).in_timesheets = True
         # TODO: it's quicker to enter commits into timesheets without the
         # constant reloading, but timesheets are not updated otherwise.
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'reload',
-        }
+        if self.env.user.company_id.reload_after_commit:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'reload',
+            }
