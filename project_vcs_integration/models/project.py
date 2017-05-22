@@ -5,7 +5,7 @@ from odoo import fields, models, api
 
 class Project(models.Model):
     """Extend with VCS integration."""
-    
+
     _inherit = 'project.project'
 
     repository_id = fields.Many2one(

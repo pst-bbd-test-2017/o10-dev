@@ -4,7 +4,7 @@
 
 {
     'name': 'Project Management Integration with VCS',
-    'version': '0.9.0',
+    'version': '0.10.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """
@@ -19,6 +19,8 @@
         'hr_timesheet'
     ],
     'data': [
+        'security/vcs_integration_security.xml',
+        'security/ir.model.access.csv',
         'views/repository_views.xml',
         'views/project_views.xml',
         'views/project_vcs_config_settings_views.xml',

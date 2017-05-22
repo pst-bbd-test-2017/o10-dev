@@ -1,0 +1,9 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_vcs_user_employee,access_vcs_user_employee,model_vcs_user,base.group_user,1,0,0,0
+access_vcs_user_manager,access_vcs_user_manager,model_vcs_user,project_vcs_integration.vcs_manager,1,1,1,1
+access_vcs_repository_employee,access_vcs_repository_employee,model_vcs_repository,base.group_user,1,0,0,0
+access_vcs_repository_manager,access_vcs_repository_manager,model_vcs_repository,project_vcs_integration.vcs_manager,1,1,1,1
+access_vcs_branch_employee,access_vcs_branch_employee,model_vcs_branch,base.group_user,1,0,0,0
+access_vcs_branch_manager,access_vcs_branch_manager,model_vcs_branch,project_vcs_integration.vcs_manager,1,1,1,1
+access_vcs_commit_employee,access_vcs_commit_employee,model_vcs_commit,base.group_user,1,0,0,0
+access_vcs_commit_manager,access_vcs_commit_manager,model_vcs_commit,project_vcs_integration.vcs_manager,1,1,1,1
