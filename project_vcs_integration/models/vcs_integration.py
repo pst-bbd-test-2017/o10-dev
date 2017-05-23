@@ -273,6 +273,7 @@ class VCSBranch(models.Model):
                 if hasattr(pr, 'source') and pr.source['branch']['name'] == self.name:
                     return pr
             return False
+        raise NotImplementedError
 
     @api.one
     def action_update(self):
@@ -356,14 +357,6 @@ class VCSBranch(models.Model):
             self.commit_id = sorted(
                 self.commit_ids, key=lambda x: x.date, reverse=True)[0]
 
-    # PR: notes
-    # state: pr._state.value
-    # SHA: pr._base.sha
-    # user login: pr.user.login
-    # destination branch name: pr.base.ref
-    # source branch name: pr.head.ref
-    # link: pr._rawData['_links']['html']['href']
-
 
 class VCSCommit(models.Model):
     """Commit model."""
@@ -374,8 +367,6 @@ class VCSCommit(models.Model):
     name = fields.Text()
     sha_string = fields.Char(string="SHA")
     type = fields.Selection(selection=VCS_TYPE_SELECTION)
-    # TODO: branch_id might not make sense as a commit may belong to several
-    # branches, may need to remove or make many2many
     branch_ids = fields.Many2many('vcs.branch', ondelete='cascade')
     author = fields.Char(string="Author")
     date = fields.Date(string="Commit Date")
