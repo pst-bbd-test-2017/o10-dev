@@ -196,9 +196,19 @@ class VCSBranch(models.Model):
         readonly=True,
         store=True
     )
-    commit_id = fields.Many2one('vcs.commit', string="Latest Commit")
-    related_commit_author = fields.Char(related='commit_id.author')
-    related_commit_sha_string = fields.Char(related='commit_id.sha_string')
+    commit_id = fields.Many2one(
+        'vcs.commit',
+        string="Latest Commit",
+        readonly=True,
+    )
+    related_commit_author = fields.Char(
+        related='commit_id.author',
+        readonly=True
+    )
+    related_commit_sha_string = fields.Char(
+        related='commit_id.sha_string',
+        readonly=True
+    )
     commit_ids = fields.Many2many('vcs.commit', 'branch_ids', readonly=True)
     pull_request = fields.Char(string="Pull Request", readonly=True)
     pull_request_link = fields.Char(

@@ -4,7 +4,7 @@
 
 {
     'name': 'Project Management Integration with VCS',
-    'version': '0.12.0',
+    'version': '0.13.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """
