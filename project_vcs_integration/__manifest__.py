@@ -4,7 +4,7 @@
 
 {
     'name': 'Project Management Integration with VCS',
-    'version': '0.13.0',
+    'version': '0.14.0',
     'category': 'Project',
     'summary': 'project, vcs, git, integration',
     'description': """
@@ -13,7 +13,7 @@
     'author': 'Paulius Stundžia',
     'website': '',
     'external_dependencies': {
-        'python': ['github', 'pybitbucket']},
+        'python': ['pygithub', 'pybitbucket']},
     'depends': [     
         'project',
         'hr_timesheet'
